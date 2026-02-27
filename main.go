@@ -40,7 +40,6 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func validateChirp(w http.ResponseWriter, r *http.Request) {
-
 	type parameters struct {
 		Body string `json:"body"`
 	}

@@ -12,11 +12,17 @@ import (
 	"github.com/rayhong118/BootDev-Chirpy/internal/database"
 )
 
+type apiConfig struct {
+	fileserverHits atomic.Int32
+	db             *database.Queries
+}
+
 func main() {
-	godotenv.Load()
+
 	const filepathRoot = "."
 	const port = "8080"
 
+	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -24,8 +30,13 @@ func main() {
 	}
 	dbQueries := database.New(db)
 
+	apiCfg := apiConfig{
+		fileserverHits: atomic.Int32{},
+		db:             dbQueries,
+	}
+
 	mux := http.NewServeMux()
-	apiCfg := apiConfig{db: dbQueries}
+
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
@@ -39,11 +50,6 @@ func main() {
 
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(srv.ListenAndServe())
-}
-
-type apiConfig struct {
-	fileserverHits atomic.Int32
-	db             *database.Queries
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {

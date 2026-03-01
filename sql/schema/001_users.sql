@@ -1,8 +1,8 @@
 -- +goose Up
 CREATE TABLE users (
-    id INT PRIMARY KEY,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
+    id UUID PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL
 );
 

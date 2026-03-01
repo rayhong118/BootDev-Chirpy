@@ -14,7 +14,7 @@ func validateChirp(w http.ResponseWriter, r *http.Request) {
 		Cleaned string `json:"cleaned_body"`
 	}
 
-	decoder := json.NewDecoder((r.Body))
+	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
 

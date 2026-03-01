@@ -54,9 +54,17 @@ func (cfg *apiConfig) handlePostChirp(w http.ResponseWriter, r *http.Request) {
 		Body:   cleanChirp(chirp.Body, profane),
 		UserID: chirp.UserId,
 	})
+	if err != nil {
+		respondWithError(w, 500, "Could not create chirp", err)
+		return
+	}
 
 	respondWithJSON(w, 201, Chirp{
-		responseChirp.ID, responseChirp.CreatedAt, responseChirp.UpdatedAt, responseChirp.Body, responseChirp.UserID,
+		ID:        responseChirp.ID,
+		CreatedAt: responseChirp.CreatedAt,
+		UpdatedAt: responseChirp.UpdatedAt,
+		Body:      responseChirp.Body,
+		UserId:    responseChirp.UserID,
 	})
 }
 

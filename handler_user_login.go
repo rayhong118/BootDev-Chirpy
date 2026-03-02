@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -32,19 +33,23 @@ func (cfg *apiConfig) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	email := payload.Email
-	hashedPassword, err := auth.HashPassword(payload.Password)
 
 	user, getUserErr := cfg.db.GetUserByEmail(r.Context(), email)
 
 	if getUserErr != nil {
-		respondWithError(w, 401, "Incorrect email ", getUserErr)
+		respondWithError(w, 401, "Incorrect email or password", getUserErr)
 		return
 	}
 
-	storedHashedPassword := user.HashedPassword
+	match, checkPasswordErr := auth.CheckPasswordHash(payload.Password, user.HashedPassword)
 
-	if hashedPassword != storedHashedPassword {
-		respondWithError(w, 401, "Incorrect email or password", getUserErr)
+	if checkPasswordErr != nil {
+		respondWithError(w, 500, "Something went wrong", checkPasswordErr)
+		return
+	}
+
+	if match != true {
+		respondWithError(w, 401, "Incorrect email or password", errors.New("Incorrect email or password"))
 		return
 	}
 

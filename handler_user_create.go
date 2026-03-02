@@ -34,7 +34,10 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	email := request.Email
 	hashedPassword, err := auth.HashPassword(request.Password)
 
-	user, createUserErr := cfg.db.CreateUser(r.Context(), database.CreateUserParams{email, hashedPassword})
+	user, createUserErr := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
+		Email:          email,
+		HashedPassword: hashedPassword,
+	})
 
 	if createUserErr != nil {
 		respondWithError(w, 500, "Create user error", err)

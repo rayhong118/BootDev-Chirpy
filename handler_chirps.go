@@ -89,7 +89,8 @@ func (cfg *apiConfig) handleGetChirps(w http.ResponseWriter, r *http.Request) {
 	output := make([]Chirp, len(chirps))
 
 	for i, chirp := range chirps {
-		output[i] = Chirp{ID: chirp.ID,
+		output[i] = Chirp{
+			ID:        chirp.ID,
 			CreatedAt: chirp.CreatedAt,
 			UpdatedAt: chirp.UpdatedAt,
 			Body:      chirp.Body,
@@ -99,4 +100,29 @@ func (cfg *apiConfig) handleGetChirps(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, 200, output)
 
+}
+
+func (cfg *apiConfig) handleGetChirpById(w http.ResponseWriter, r *http.Request) {
+	chirpId := r.PathValue("chirpID")
+
+	chirpUUID, parseErr := uuid.Parse(chirpId)
+	if parseErr != nil {
+		respondWithError(w, 404, "Chirp fetch failed", parseErr)
+		return
+	}
+
+	chirp, getChirpErr := cfg.db.GetChirpByID(r.Context(), chirpUUID)
+
+	if getChirpErr != nil {
+		respondWithError(w, 404, "Chirp fetch failed", getChirpErr)
+		return
+	}
+
+	respondWithJSON(w, 200, Chirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserId:    chirp.UserID,
+	})
 }

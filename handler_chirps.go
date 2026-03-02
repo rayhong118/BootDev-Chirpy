@@ -78,3 +78,25 @@ func cleanChirp(chirp string, profane map[string]struct{}) string {
 	}
 	return strings.Join(chirpSlice, " ")
 }
+
+func (cfg *apiConfig) handleGetChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, getChirpsErr := cfg.db.GetChrips(r.Context())
+
+	if getChirpsErr != nil {
+		respondWithError(w, 500, "Chirp fetch failed", getChirpsErr)
+		return
+	}
+	output := make([]Chirp, len(chirps))
+
+	for i, chirp := range chirps {
+		output[i] = Chirp{ID: chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserId:    chirp.UserID,
+		}
+	}
+
+	respondWithJSON(w, 200, output)
+
+}

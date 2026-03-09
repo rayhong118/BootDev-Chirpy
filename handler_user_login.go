@@ -8,21 +8,22 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rayhong118/BootDev-Chirpy/internal/auth"
+	"github.com/rayhong118/BootDev-Chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	type LoginPayload struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	type LoginResponse struct {
-		Email     string    `json:"email"`
-		Id        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Token     string    `json:"token"`
+		Email        string    `json:"email"`
+		Id           uuid.UUID `json:"id"`
+		CreatedAt    time.Time `json:"created_at"`
+		UpdatedAt    time.Time `json:"updated_at"`
+		Token        string    `json:"token"`
+		RefreshToken string    `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -55,21 +56,27 @@ func (cfg *apiConfig) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var expirationTime int
-	if payload.ExpiresInSeconds == 0 || payload.ExpiresInSeconds > 3600 {
-		expirationTime = 3600
-	} else {
-		expirationTime = payload.ExpiresInSeconds
+	token, err := auth.MakeJWT(user.ID, cfg.Secret)
+
+	refreshToken := auth.MakeRefreshToken()
+
+	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:  refreshToken,
+		UserID: uuid.NullUUID{UUID: user.ID, Valid: true},
+	})
+
+	if err != nil {
+		respondWithError(w, 500, "Couldn't save refresh token", err)
+		return
 	}
 
-	token, err := auth.MakeJWT(user.ID, cfg.Secret, time.Duration(expirationTime)*time.Second)
-
 	respondWithJSON(w, 200, LoginResponse{
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Id:        user.ID,
-		Token:     token,
+		Email:        user.Email,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Id:           user.ID,
+		Token:        token,
+		RefreshToken: refreshToken,
 	})
 
 }

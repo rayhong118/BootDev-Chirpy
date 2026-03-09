@@ -12,8 +12,9 @@ import (
 
 func (cfg *apiConfig) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	type LoginPayload struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
 	}
 
 	type LoginResponse struct {
@@ -21,6 +22,7 @@ func (cfg *apiConfig) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		Id        uuid.UUID `json:"id"`
 		CreatedAt time.Time `json:"created_at"`
 		UpdatedAt time.Time `json:"updated_at"`
+		Token     string    `json:"token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -53,11 +55,21 @@ func (cfg *apiConfig) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var expirationTime int
+	if payload.ExpiresInSeconds == 0 || payload.ExpiresInSeconds > 3600 {
+		expirationTime = 3600
+	} else {
+		expirationTime = payload.ExpiresInSeconds
+	}
+
+	token, err := auth.MakeJWT(user.ID, cfg.Secret, time.Duration(expirationTime)*time.Second)
+
 	respondWithJSON(w, 200, LoginResponse{
 		Email:     user.Email,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Id:        user.ID,
+		Token:     token,
 	})
 
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rayhong118/BootDev-Chirpy/internal/auth"
 	"github.com/rayhong118/BootDev-Chirpy/internal/database"
 )
 
@@ -26,6 +27,20 @@ type Chirp struct {
 func (cfg *apiConfig) handlePostChirp(w http.ResponseWriter, r *http.Request) {
 	type successResponse struct {
 		Cleaned string `json:"cleaned_body"`
+	}
+
+	tokenString, tokenErr := auth.GetBearerToken(r.Header)
+
+	if tokenErr != nil {
+		respondWithError(w, 401, "401 Unauthorized tokenErr", tokenErr)
+		return
+	}
+
+	userID, validationErr := auth.ValidateJWT(tokenString, cfg.Secret)
+
+	if validationErr != nil {
+		respondWithError(w, 401, "401 Unauthorized validationErr", validationErr)
+		return
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -52,7 +67,7 @@ func (cfg *apiConfig) handlePostChirp(w http.ResponseWriter, r *http.Request) {
 
 	responseChirp, err := cfg.db.SaveChirp(r.Context(), database.SaveChirpParams{
 		Body:   cleanChirp(chirp.Body, profane),
-		UserID: chirp.UserId,
+		UserID: userID,
 	})
 	if err != nil {
 		respondWithError(w, 500, "Could not create chirp", err)

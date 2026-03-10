@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -140,4 +141,47 @@ func (cfg *apiConfig) handleGetChirpById(w http.ResponseWriter, r *http.Request)
 		Body:      chirp.Body,
 		UserId:    chirp.UserID,
 	})
+}
+
+func (cfg *apiConfig) handleDeleteChirpById(w http.ResponseWriter, r *http.Request) {
+	chirpId := r.PathValue("chirpID")
+
+	token, getTokenError := auth.GetBearerToken(r.Header)
+	if getTokenError != nil {
+		respondWithError(w, 401, "unauthed", getTokenError)
+		return
+	}
+
+	userId, tokenErr := auth.ValidateJWT(token, cfg.Secret)
+	if tokenErr != nil {
+		respondWithError(w, 401, "Failed to validate token from header", tokenErr)
+		return
+	}
+
+	chirpUUID, parseErr := uuid.Parse(chirpId)
+	if parseErr != nil {
+		respondWithError(w, 403, "Invalid chirp ID", parseErr)
+		return
+	}
+
+	chirp, getChirpErr := cfg.db.GetChirpByID(r.Context(), chirpUUID)
+
+	if getChirpErr != nil {
+		respondWithError(w, 404, "Cannot get chirp", getChirpErr)
+		return
+	}
+	if chirp.UserID != userId {
+		respondWithError(w, 403, "Not the correct user", errors.New("Not the correct user"))
+		return
+	}
+
+	deleteChirpErr := cfg.db.DeleteChirpById(r.Context(), chirp.ID)
+
+	if deleteChirpErr != nil {
+		respondWithError(w, 500, "Failed to delete chirp by ID", deleteChirpErr)
+		return
+	}
+
+	respondWithJSON(w, 204, nil)
+
 }

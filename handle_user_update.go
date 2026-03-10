@@ -33,7 +33,7 @@ func (cfg *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
 	userId, tokenErr := auth.ValidateJWT(token, cfg.Secret)
 
 	if tokenErr != nil {
-		respondWithError(w, 401, "Failed to validate token from header", getTokenErr)
+		respondWithError(w, 401, "Failed to validate token from header", tokenErr)
 		return
 	}
 

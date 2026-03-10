@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -16,12 +17,14 @@ type updateUserRequest struct {
 }
 
 type updateUserResponse struct {
-	Email     string    `json:"email"`
-	Id        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Email       string    `json:"email"`
+	Id          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	IsChirpyRed bool      `json:"is_chirpy_red"`
 }
 
+// handle user email and password update
 func (cfg *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
 	token, getTokenErr := auth.GetBearerToken(r.Header)
 
@@ -65,10 +68,49 @@ func (cfg *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, 200, updateUserResponse{
-		Email:     newUserInfo.Email,
-		CreatedAt: newUserInfo.CreatedAt,
-		UpdatedAt: newUserInfo.UpdatedAt,
-		Id:        newUserInfo.ID,
+		Email:       newUserInfo.Email,
+		CreatedAt:   newUserInfo.CreatedAt,
+		UpdatedAt:   newUserInfo.UpdatedAt,
+		Id:          newUserInfo.ID,
+		IsChirpyRed: newUserInfo.IsChirpyRed.Bool,
 	})
+
+}
+
+type subscriptionUpdatePayload struct {
+	Event string                 `json:"event"`
+	Data  subscriptionUpdateData `json:"data"`
+}
+
+type subscriptionUpdateData struct {
+	UserID uuid.UUID `json:"user_id"`
+}
+
+// handle subscription update. it only add subscription for now
+func (cfg *apiConfig) handleSubscriptionUpdate(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	request := subscriptionUpdatePayload{}
+	err := decoder.Decode(&request)
+
+	if err != nil {
+		respondWithError(w, 500, "Something went wrong", err)
+		return
+	}
+
+	event := request.Event
+
+	if event != "user.upgraded" {
+		respondWithJSON(w, 204, nil)
+		return
+	}
+
+	updateErr := cfg.db.UpdateUserRedSubscription(r.Context(), database.UpdateUserRedSubscriptionParams{ID: request.Data.UserID, IsChirpyRed: sql.NullBool{Bool: true, Valid: true}})
+
+	if updateErr != nil {
+		respondWithError(w, 404, "User can't be found", updateErr)
+		return
+	}
+
+	respondWithJSON(w, 204, nil)
 
 }

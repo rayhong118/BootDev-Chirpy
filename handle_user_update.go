@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -88,6 +89,13 @@ type subscriptionUpdateData struct {
 
 // handle subscription update. it only add subscription for now
 func (cfg *apiConfig) handleSubscriptionUpdate(w http.ResponseWriter, r *http.Request) {
+	apiKey, getApiKeyErr := auth.GetPolkaKey(r.Header)
+
+	if getApiKeyErr != nil || apiKey != os.Getenv("POLKA_KEY") {
+		respondWithError(w, 401, "Incorrect or missing API key", getApiKeyErr)
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	request := subscriptionUpdatePayload{}
 	err := decoder.Decode(&request)

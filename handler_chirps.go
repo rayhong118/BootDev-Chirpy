@@ -96,7 +96,20 @@ func cleanChirp(chirp string, profane map[string]struct{}) string {
 }
 
 func (cfg *apiConfig) handleGetChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, getChirpsErr := cfg.db.GetChrips(r.Context())
+
+	authorId := r.URL.Query().Get("author_id")
+	authorUUID := uuid.NullUUID{}
+	if authorId != "" {
+		u, err := uuid.Parse(authorId)
+		if err != nil {
+			respondWithError(w, 400, "Invalid author_id", err)
+			return
+		}
+		authorUUID.UUID = u
+		authorUUID.Valid = true
+	}
+
+	chirps, getChirpsErr := cfg.db.GetChirps(r.Context(), authorUUID)
 
 	if getChirpsErr != nil {
 		respondWithError(w, 500, "Chirp fetch failed", getChirpsErr)

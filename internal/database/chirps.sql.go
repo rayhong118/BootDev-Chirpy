@@ -38,12 +38,14 @@ func (q *Queries) GetChirpByID(ctx context.Context, id uuid.UUID) (Chirp, error)
 	return i, err
 }
 
-const getChrips = `-- name: GetChrips :many
-SELECT id, created_at, updated_at, body, user_id FROM chirps ORDER BY created_at ASC
+const getChirps = `-- name: GetChirps :many
+SELECT id, created_at, updated_at, body, user_id FROM chirps
+WHERE user_id = COALESCE($1, user_id)
+ORDER BY created_at ASC
 `
 
-func (q *Queries) GetChrips(ctx context.Context) ([]Chirp, error) {
-	rows, err := q.db.QueryContext(ctx, getChrips)
+func (q *Queries) GetChirps(ctx context.Context, userID uuid.NullUUID) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getChirps, userID)
 	if err != nil {
 		return nil, err
 	}

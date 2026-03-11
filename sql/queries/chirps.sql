@@ -9,8 +9,11 @@ VALUES (
 )
 RETURNING *;
 
--- name: GetChrips :many
-SELECT * FROM chirps ORDER BY created_at ASC;
+-- name: GetChirps :many
+SELECT * FROM chirps
+WHERE user_id = COALESCE(sqlc.narg('user_id'), user_id)
+ORDER BY created_at ASC;
+
 
 -- name: GetChirpByID :one
 SELECT * FROM chirps WHERE id = $1;
